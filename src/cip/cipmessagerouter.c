@@ -2,12 +2,7 @@
  * Copyright (c) 2009, Rockwell Automation, Inc.
  * All rights reserved. 
  *
- * Contributors:
- *     <date>: <author>, <author email> - changes
  ******************************************************************************/
-#include <stdio.h>
-#include <assert.h>
-
 #include "opener_api.h"
 #include "cipcommon.h"
 #include "cipmessagerouter.h"
@@ -57,9 +52,6 @@ createMRRequeststructure(EIP_UINT8 * pa_pnData, EIP_INT16 pa_nLength,
 EIP_STATUS
 CIP_MessageRouter_Init()
 {
-  /* init the list of available objects*/
-  g_pt2firstObject = 0;
-
   S_CIP_Class *pstMessageRouter;
 
   pstMessageRouter = createCIPClass(CIP_MESSAGE_ROUTER_CLASS_CODE, /* class ID*/
@@ -93,7 +85,7 @@ getRegisteredObject(EIP_UINT32 pa_nClassID)
 
   while (p) /* for each entry in list*/
     {
-      assert(p->pt2Class != 0);
+      OPENER_ASSERT(p->pt2Class != NULL);
       if (p->pt2Class->nClassID == pa_nClassID)
         return p; /* return registration node if it matches class ID*/
       p = p->next;
@@ -113,7 +105,7 @@ getCIPClass(EIP_UINT32 pa_nClassID)
 }
 
 S_CIP_Instance *
-getCIPInstance(S_CIP_Class * pa_pstClass, EIP_UINT16 pa_nInstanceNr)
+getCIPInstance(S_CIP_Class * pa_pstClass, EIP_UINT32 pa_nInstanceNr)
 {
   S_CIP_Instance *p; /* pointer to linked list of instances from the class object*/
 
@@ -142,6 +134,7 @@ registerClass(S_CIP_Class * pa_pt2Class)
     return EIP_ERROR; /* check for memory error*/
 
   (*p)->pt2Class = pa_pt2Class; /* fill in the new node*/
+  (*p)->next = NULL;
 
   return EIP_OK;
 }
@@ -185,7 +178,7 @@ notifyMR(EIP_UINT8 * pa_pnData, int pa_nDataLength)
           /* call notify function from Object with ClassID (gMRRequest.RequestPath.ClassID)
            object will or will not make an reply into gMRResponse*/
           gMRResponse.Reserved = 0;
-          assert(pt2regObject->pt2Class);
+          OPENER_ASSERT(NULL != pt2regObject->pt2Class);
           OPENER_TRACE_INFO(
               "notifyMR: calling notify function of class '%s'\n",
               pt2regObject->pt2Class->acName);
@@ -289,4 +282,41 @@ createMRRequeststructure(EIP_UINT8 * pa_pnData, EIP_INT16 pa_nLength,
     return CIP_ERROR_PATH_SIZE_INVALID;
   else
     return CIP_ERROR_SUCCESS;
+}
+
+void deleteAllClasses(void)
+{
+  S_CIP_MR_Object *pstRunner = g_pt2firstObject; /* get pointer to head of class registration list */
+  S_CIP_MR_Object *pstToDelete;
+  S_CIP_Instance *pstInstRunner, *pstInstDel;
+
+  while (NULL != pstRunner)
+    {
+      pstToDelete = pstRunner;
+      pstRunner = pstRunner->next;
+
+
+      pstInstRunner = pstToDelete->pt2Class->pstInstances;
+      while (NULL != pstInstRunner)
+        {
+          pstInstDel = pstInstRunner;
+          pstInstRunner = pstInstRunner->pstNext;
+          if (pstToDelete->pt2Class->nNr_of_Attributes) /* if the class has instance attributes */
+            { /* then free storage for the attribute array */
+              IApp_CipFree(pstInstDel->pstAttributes);
+            }
+          IApp_CipFree(pstInstDel);
+        }
+
+      /*clear meta class data*/
+      IApp_CipFree(pstToDelete->pt2Class->pstClass->acName);
+      IApp_CipFree(pstToDelete->pt2Class->pstClass->pstServices);
+      IApp_CipFree(pstToDelete->pt2Class->pstClass);
+      /*clear class data*/
+      IApp_CipFree(pstToDelete->pt2Class->pstAttributes);
+      IApp_CipFree(pstToDelete->pt2Class->pstServices);
+      IApp_CipFree(pstToDelete->pt2Class);
+      IApp_CipFree(pstToDelete);
+    }
+  g_pt2firstObject = NULL;
 }

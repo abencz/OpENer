@@ -2,12 +2,8 @@
  * Copyright (c) 2009, Rockwell Automation, Inc.
  * All rights reserved. 
  *
- * Contributors:
- *     <date>: <author>, <author email> - changes
  ******************************************************************************/
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "opener_user_conf.h"
 #include "ciptcpipinterface.h"
@@ -35,10 +31,10 @@ S_CIP_TCPIPNetworkInterfaceConfiguration Interface_Configuration = /* #5 */
   0, /* NameServer */
   0, /* NameServer2 */
     { /* DomainName */
-    0, 0, } };
+    0, NULL, } };
 
 S_CIP_String Hostname = /* #6 */
-  { 0, 0 };
+  { 0, NULL};
 
 /*!Multicast address to be used for I/O connections*/
 EIP_UINT32 g_nMultiCastAddress;
@@ -47,26 +43,33 @@ EIP_STATUS
 configureNetworkInterface(const char *pa_acIpAdress,
     const char *pa_acSubNetMask, const char *pa_acGateway)
 {
+  unsigned nHostId;
+  
   Interface_Configuration.IPAddress = inet_addr(pa_acIpAdress);
   Interface_Configuration.NetworkMask = inet_addr(pa_acSubNetMask);
   Interface_Configuration.Gateway = inet_addr(pa_acGateway);
 
   /* calculate the CIP multicast address. The multicast address is calculated, not input*/
-  unsigned nHostId = ntohl(Interface_Configuration.IPAddress) & ~ntohl(
+  nHostId = ntohl(Interface_Configuration.IPAddress) & ~ ntohl(
       Interface_Configuration.NetworkMask); /* see CIP spec 3-5.3 for multicast address algorithm*/
   nHostId -= 1;
   nHostId &= 0x3ff;
-  g_nMultiCastAddress = htonl(ntohl(inet_addr("239.192.1.0")) | nHostId << 5);
+  g_nMultiCastAddress = htonl(ntohl(inet_addr("239.192.1.0")) + (nHostId << 5));
 
   return EIP_OK;
 }
 
+//FIXME check on NULL
+
 void
 configureDomainName(const char *pa_acDomainName)
 {
-  if (0 != Interface_Configuration.DomainName.String)
+  if (NULL != Interface_Configuration.DomainName.String)
     {
-      free(Interface_Configuration.DomainName.String);
+      /* if the string is already set to a value we have to free the resources
+       * before we can set the new value in order to avoid memory leaks.
+       */
+      IApp_CipFree(Interface_Configuration.DomainName.String);
     }
   Interface_Configuration.DomainName.Length = strlen(pa_acDomainName);
   if (Interface_Configuration.DomainName.Length)
@@ -77,16 +80,19 @@ configureDomainName(const char *pa_acDomainName)
     }
   else
     {
-      Interface_Configuration.DomainName.String = 0;
+      Interface_Configuration.DomainName.String = NULL;
     }
 }
 
 void
 configureHostName(const char *pa_acHostName)
 {
-  if (0 != Hostname.String)
+  if (NULL != Hostname.String)
     {
-      free(Hostname.String);
+      /* if the string is already set to a value we have to free the resources
+       * before we can set the new value in order to avoid memory leaks.
+       */
+      IApp_CipFree(Hostname.String);
     }
   Hostname.Length = strlen(pa_acHostName);
   if (Hostname.Length)
@@ -97,7 +103,7 @@ configureHostName(const char *pa_acHostName)
     }
   else
     {
-      Hostname.String = 0;
+      Hostname.String = NULL;
     }
 }
 
@@ -144,8 +150,9 @@ CIP_TCPIP_Interface_Init()
   1, /* # instance services*/
   1, /* # instances*/
   "TCP/IP interface", 1)) == 0)
-    return EIP_ERROR;
-
+    {
+      return EIP_ERROR;
+    }
   pstInstance = getCIPInstance(p_stTCPIPClass, 1); /* bind attributes to the instance #1 that was created above*/
 
   insertAttribute(pstInstance, 1, CIP_DWORD, (void *) &TCP_Status);
@@ -160,5 +167,22 @@ CIP_TCPIP_Interface_Init()
       &setAttributeSingleTCP, "SetAttributeSingle");
 
   return EIP_OK;
+}
+
+void
+shutdownTCPIP_Interface(void)
+{
+  /*Only free the resources if they are initialized */
+  if (NULL != Hostname.String)
+    {
+      IApp_CipFree(Hostname.String);
+      Hostname.String = NULL;
+    }
+
+  if (NULL != Interface_Configuration.DomainName.String)
+    {
+      IApp_CipFree(Interface_Configuration.DomainName.String);
+      Interface_Configuration.DomainName.String = NULL;
+  }
 }
 

@@ -2,8 +2,6 @@
  * Copyright (c) 2009, Rockwell Automation, Inc.
  * All rights reserved.
  *
- * Contributors:
- *     <date>: <author>, <author email> - changes
  ******************************************************************************/
 #include "appcontype.h"
 #include "cipconnectionmanager.h"
@@ -380,6 +378,18 @@ closeAllConnsForInputWithSameType(EIP_UINT32 pa_unInputPoint,
           pstRunner = pstRunner->m_pstNext;
         }
     }
+}
+
+void closeAllConnections(void){
+  S_CIP_ConnectionObject *pstRunner = g_pstActiveConnectionList;
+  while (NULL != pstRunner){
+    closeConnection(pstRunner);
+    /* Close connection will remove the connection from the list therefore we
+     * need to get again the start until there is no connection left
+     */
+    pstRunner = g_pstActiveConnectionList;
+  }
+
 }
 
 bool

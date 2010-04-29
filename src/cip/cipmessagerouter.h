@@ -2,8 +2,6 @@
  * Copyright (c) 2009, Rockwell Automation, Inc.
  * All rights reserved. 
  *
- * Contributors:
- *     <date>: <author>, <author email> - changes
  ******************************************************************************/
 #ifndef CIPMESSAGEROUTER_H_
 #define CIPMESSAGEROUTER_H_
@@ -26,6 +24,10 @@ extern S_CIP_MR_Response gMRResponse;
  */
 EIP_STATUS
 CIP_MessageRouter_Init(void);
+
+/*! Free all data allocated by the classes created in the cip stack
+ */
+void deleteAllClasses(void);
 
 /*! Notify the MessageRouter that an explicit message (connected or unnconnected)
  *  has been recieved. This function will be called from the encapsulation layer.

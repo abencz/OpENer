@@ -2,12 +2,7 @@
  * Copyright (c) 2009, Rockwell Automation, Inc.
  * All rights reserved. 
  *
- * Contributors:
- *     <date>: <author>, <author email> - changes
  ******************************************************************************/
-#include <stdio.h>
-#include <assert.h>
-
 #include "opener_api.h"
 #include "cipcommon.h"
 #include "cipmessagerouter.h"

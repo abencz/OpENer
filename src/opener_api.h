@@ -2,8 +2,6 @@
  * Copyright (c) 2009, Rockwell Automation, Inc.
  * All rights reserved. 
  *
- * Contributors:
- *     <date>: <author>, <author email> - changes
  ******************************************************************************/
 #ifndef CIP_API_H_
 #define CIP_API_H_
@@ -65,9 +63,26 @@ setDeviceSerialNumber(EIP_UINT32 pa_nSerialNumber);
 /** \ingroup CIP_API 
  * \brief Initialize and setup the CIP-stack
  * 
+ * @param pa_nUniqueConnID value passed to Connection_Manager_Init()to form a
+ *                      "per boot" unique connection ID.
+ *
  */
 void
-CIP_Init(void);
+CIP_Init(EIP_UINT16 pa_nUniqueConnID);
+
+
+/** \ingroup CIP_API
+ * \brief Shutdown the CIP-stack
+ *
+ * This will
+ *   - close all open I/O connections,
+ *   - close all open explicit connections, and
+ *   - free all memory allocated by the stack.
+ *
+ * Memory allocated by the application will not be freed. This has to be done
+ * by the application!
+ */
+void shutdownCIP(void);
 
 /** \ingroup CIP_API 
  * \brief Get a pointer to a CIP object with given class code
@@ -88,7 +103,7 @@ getCIPClass(EIP_UINT32 pa_nClassID);
  *          0 if instance is not in the object
  */
 S_CIP_Instance *
-getCIPInstance(S_CIP_Class *pa_pstObject, EIP_UINT16 pa_nInstanceNr);
+getCIPInstance(S_CIP_Class *pa_pstObject, EIP_UINT32 pa_nInstanceNr);
 
 /** \ingroup CIP_API 
  * \brief Get a pointer to an instance's attribute
@@ -167,7 +182,7 @@ addCIPInstance(S_CIP_Class * pa_pstCIPClass, EIP_UINT32 pa_nInstanceId);
  *  @param pa_pt2data pointer to data of attribute.
  */
 void
-insertAttribute(S_CIP_Instance *pa_pInstance, EIP_UINT8 pa_nAttributeNr,
+insertAttribute(S_CIP_Instance *pa_pInstance, EIP_UINT32 pa_nAttributeNr,
     EIP_UINT8 pa_nCIP_Type, void* pa_pt2data);
 
 /** \ingroup CIP_API 
@@ -200,7 +215,7 @@ insertService(S_CIP_Class *pa_pClass, EIP_UINT8 pa_nServiceNr,
  * The notification on received configuration data is handled with the IApp_after_receive function.
  */
 S_CIP_Instance *
-createAssemblyObject(EIP_UINT8 pa_nInstanceID, EIP_BYTE *pa_data,
+createAssemblyObject(EIP_UINT32 pa_nInstanceID, EIP_BYTE *pa_data,
     EIP_UINT16 pa_datalength);
 
 /** \ingroup CIP_API
@@ -252,7 +267,8 @@ configureListenOnlyConnectionPoint(unsigned int pa_unConnNum,
  * Notify the encapsulation layer that an explicit message has been received via TCP or UDP.
  * 
  * @param pa_socket socket handle from which data is received.
- * @param pa_buf buffer to be read.
+ * @param pa_buf buffer that contains the recieved data. This buffer will also contain the 
+ *       response if one is to be sent.  
  * @param pa_length length of the data in pa_buf.
  * @param pa_nRemainingBytes return how many bytes of the input are left over after we're done here
  * @return length of reply that need to be sent back
@@ -384,6 +400,15 @@ void *
 IApp_CipCalloc(unsigned pa_nNumberOfElements, unsigned pa_nSizeOfElement);
 
 /**\ingroup CIP_CALLBACK_API 
+ * \brief Free memory allocated by the OpENer
+ *
+ * emulate the common c-library function free
+ * @param pointer to the allocated memory
+ * return
+ */
+void IApp_CipFree(void *pa_poData);
+
+/**\ingroup CIP_CALLBACK_API
  * \brief Inform the application that the Run/Idle State has been changed
  *  by the originator. 
  * 
@@ -400,7 +425,11 @@ IApp_RunIdleChanged(EIP_UINT32 pa_nRunIdleValue);
  * @param pa_pstAddr pointer to the address holding structure
  *     Attention: For producing point-to-point connection the pa_pstAddr->sin_addr.s_addr
  *         member is set to 0 by OpENer. The network layer of the application has
- *         to set the correct addresss of the originator.
+ *         to set the correct address of the originator.
+ *     Attention: For consuming connection the network layer has to set the pa_pstAddr->sin_addr.s_addr
+ *         to the correct address of the originator.
+ * FIXME add an additional parameter that can be used by the CIP stack to request the originators sockaddr_in
+ * data.
  * @return socket identifier on success
  *         -1 on error 
  */
@@ -532,7 +561,7 @@ IApp_CloseSocket(int pa_nSockFd);
  *     for port AF12hex. The received data has to be hand over to Ethernet
  *     encapsulation layer with the function int handleReceivedExplictData(int pa_socket, EIP_UINT8* pa_buf, int pa_length, int *pa_nRemainingBytes).\n
  *     As a result of this function a response may have to be sent. The data to
- *     be sent is in the variable \ref g_acCommBuf.
+ *     be sent is in the given buffer pa_buf.
  *   - Create UDP sending and receiving sockets for implicit connected messages\n
  *     OpENer will use to call-back function int IApp_CreateUDPSocket(int pa_nDirection, struct sockaddr_in *pa_pstAddr)
  *     for informing the platform specific code that a new connection is 
@@ -550,10 +579,6 @@ IApp_CloseSocket(int pa_nSockFd);
  *     In order that OpENer can determine when to produce new data on 
  *     connections or that a connection timed out every \ref OPENER_TIMER_TICK ms the 
  *     function EIP_STATUS manageConnections(void) has to be called.
- *    
- * For all receiving functions OpENer provides the buffer \ref g_acCommBuf. The 
- * size of this buffer can be configured in opener_user_conf.h with the configuration
- * parameter \ref OPENER_ETHERNET_BUFFER_SIZE.  
  * 
  * \section callback_funcs_sec Callback Functions
  * In order to make OpENer more platform independent and in order to inform the 

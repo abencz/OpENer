@@ -2,12 +2,8 @@
  * Copyright (c) 2009, Rockwell Automation, Inc.
  * All rights reserved. 
  *
- * Contributors:
- *     <date>: <author>, <author email> - changes
  ******************************************************************************/
-#include <stdio.h>
 #include <string.h>
-#include <assert.h>
 
 #include "opener_user_conf.h"
 #include "opener_api.h"
@@ -23,6 +19,7 @@
 #include "cipmessagerouter.h"
 #include "cpf.h"
 #include "trace.h"
+#include "appcontype.h"
 
 /* global public variables */
 EIP_UINT8 g_acMessageDataReplyBuffer[OPENER_MESSAGE_DATA_REPLY_BUFFER];
@@ -39,18 +36,42 @@ int
 outputAttribute(S_CIP_attribute_struct *pa_ptstAttribute, EIP_UINT8 *pa_pnMsg);
 
 void
-CIP_Init(void)
+CIP_Init(EIP_UINT16 pa_nUniqueConnID)
 {
+  EIP_STATUS nRetVal;
   encapInit();
   /* The message router is the first CIP object that has to be initialized first!!! */
-  assert(CIP_MessageRouter_Init() == EIP_OK);
-  assert(CIP_Identity_Init() == EIP_OK);
-  assert(CIP_TCPIP_Interface_Init() == EIP_OK);
-  assert(CIP_Ethernet_Link_Init() == EIP_OK);
-  assert(Connection_Manager_Init() == EIP_OK);
-  assert(CIP_Assembly_Init() == EIP_OK);
-  /* the application has to be initiliazed at last */
-  assert(IApp_Init() == EIP_OK);
+  nRetVal = CIP_MessageRouter_Init();
+  OPENER_ASSERT(EIP_OK == nRetVal);
+  nRetVal = CIP_Identity_Init();
+  OPENER_ASSERT(EIP_OK == nRetVal);
+  nRetVal = CIP_TCPIP_Interface_Init();
+  OPENER_ASSERT(EIP_OK == nRetVal);
+  nRetVal = CIP_Ethernet_Link_Init();
+  OPENER_ASSERT(EIP_OK == nRetVal);
+  nRetVal = Connection_Manager_Init(pa_nUniqueConnID);
+  OPENER_ASSERT(EIP_OK == nRetVal);
+  nRetVal = CIP_Assembly_Init();
+  OPENER_ASSERT(EIP_OK == nRetVal);
+  /* the application has to be initialized at last */
+  nRetVal = IApp_Init();
+  OPENER_ASSERT(EIP_OK == nRetVal);
+}
+
+void
+shutdownCIP(void)
+{
+  /* First close all connections */
+  closeAllConnections();
+  /* Than free the sockets of currently active encapsulation sessions */
+  encapShutDown();
+  /*clean the data needed for the assembly object's attribute 3*/
+  shutdownAssemblies();
+
+  shutdownTCPIP_Interface();
+
+  /*no clear all the instances and classes */
+  deleteAllClasses();
 }
 
 EIP_STATUS
@@ -80,7 +101,7 @@ notifyClass(S_CIP_Class * pt2Class, S_CIP_MR_Request * pa_MRRequest,
                   pa_MRResponse->Data = &g_acMessageDataReplyBuffer[0]; /* set reply buffer, using a fixed buffer (about 100 bytes) */
                   /* call the service, and return what it returns */
                   OPENER_TRACE_INFO("notify: calling %s service\n", p->name);
-                  assert(p->m_ptfuncService);
+                  OPENER_ASSERT(NULL != p->m_ptfuncService);
                   return p->m_ptfuncService(pstInstance, pa_MRRequest,
                       pa_MRResponse, &g_acMessageDataReplyBuffer[0]);
                 }
@@ -125,7 +146,7 @@ addCIPInstances(S_CIP_Class * pa_pstCIPClass, int pa_nNr_of_Instances)
 
   first = p = (S_CIP_Instance *) IApp_CipCalloc(pa_nNr_of_Instances,
       sizeof(S_CIP_Instance)); /* allocate a block of memory for all created instances*/
-  assert(p);
+  OPENER_ASSERT(NULL != p);
   /* fail if run out of memory */
 
   pa_pstCIPClass->nNr_of_Instances += pa_nNr_of_Instances; /* add the number of instances just created to the total recorded by the class */
@@ -179,7 +200,7 @@ createCIPClass(EIP_UINT32 pa_nClassID, int pa_nNr_of_ClassAttributes,
   OPENER_TRACE_INFO("creating class '%s' with id: 0x%lx\n", pa_acName, pa_nClassID);
 
   pt2Class = getCIPClass(pa_nClassID); /* check if an class with the ClassID already exists */
-  assert(pt2Class==0);
+  OPENER_ASSERT(NULL == pt2Class);
   /* should never try to redefine a class*/
 
   /* a metaClass is a class that holds the class attributes and services
@@ -273,14 +294,14 @@ createCIPClass(EIP_UINT32 pa_nClassID, int pa_nNr_of_ClassAttributes,
 }
 
 void
-insertAttribute(S_CIP_Instance * pa_pInstance, EIP_UINT8 pa_nAttributeNr,
+insertAttribute(S_CIP_Instance * pa_pInstance, EIP_UINT32 pa_nAttributeNr,
     EIP_UINT8 pa_nCIP_Type, void *pa_pt2data)
 {
   int i;
   S_CIP_attribute_struct *p;
 
   p = pa_pInstance->pstAttributes;
-  assert(p!=0);
+  OPENER_ASSERT(NULL != p);
   /* adding a attribute to a class that was not declared to have any attributes is not allowed */
   for (i = 0; i < pa_pInstance->pstClass->nNr_of_Attributes; i++)
     {
@@ -297,9 +318,8 @@ insertAttribute(S_CIP_Instance * pa_pInstance, EIP_UINT8 pa_nAttributeNr,
           return;
         }
       p++;
-    }
-  OPENER_TRACE_ERR("Tried to insert to many attributes into class: %lu, instance %lu\n", pa_pInstance->pstClass->nInstanceNr, pa_pInstance->nInstanceNr );
-  assert(0);
+    }OPENER_TRACE_ERR("Tried to insert to many attributes into class: %lu, instance %lu\n", pa_pInstance->pstClass->nInstanceNr, pa_pInstance->nInstanceNr );
+  OPENER_ASSERT(0);
   /* trying to insert too many attributes*/
 }
 
@@ -311,7 +331,7 @@ insertService(S_CIP_Class * pa_pClass, EIP_UINT8 pa_nServiceNr,
   S_CIP_service_struct *p;
 
   p = pa_pClass->pstServices; /* get a pointer to the service array*/
-  assert(p!=0);
+  OPENER_ASSERT(p!=0);
   /* adding a service to a class that was not declared to have services is not allowed*/
   for (i = 0; i < pa_pClass->nNr_of_Services; i++) /* Iterate over all service slots attached to the class */
     {
@@ -324,7 +344,7 @@ insertService(S_CIP_Class * pa_pClass, EIP_UINT8 pa_nServiceNr,
         }
       p++;
     }
-  assert(0);
+  OPENER_ASSERT(0);
   /* adding more services than were declared is a no-no*/
 }
 
@@ -355,21 +375,33 @@ getAttributeSingle(S_CIP_Instance *pa_pstInstance,
   S_CIP_attribute_struct *p = getAttribute(pa_pstInstance,
       pa_pstMRRequest->RequestPath.AttributNr);
 
-  if ((p != 0) && (p->pt2data != 0))
-    {
-      OPENER_TRACE_INFO("getAttribute %ld\n",
-          pa_pstMRRequest->RequestPath.AttributNr); /* create a reply message containing the data*/
-      pa_pstMRResponse->DataLength = outputAttribute(p, pa_acMsg);
-      pa_pstMRResponse->ReplyService = (0x80 | pa_pstMRRequest->Service);
-      pa_pstMRResponse->GeneralStatus = CIP_ERROR_SUCCESS;
-      pa_pstMRResponse->SizeofAdditionalStatus = 0;
-      return (EIP_STATUS) pa_pstMRResponse->DataLength;
-    }
-
   pa_pstMRResponse->DataLength = 0;
   pa_pstMRResponse->ReplyService = (0x80 | pa_pstMRRequest->Service);
   pa_pstMRResponse->GeneralStatus = CIP_ERROR_ATTRIBUTE_NOT_SUPPORTED;
   pa_pstMRResponse->SizeofAdditionalStatus = 0;
+
+  if ((p != 0) && (p->pt2data != 0))
+    {
+      OPENER_TRACE_INFO("getAttribute %ld\n",
+          pa_pstMRRequest->RequestPath.AttributNr); /* create a reply message containing the data*/
+
+      /*TODO think if it is better to put this code in an own
+       * getAssemblyAttributeSingle functions which will call get attribute
+       * single.
+       */
+      if (p->CIP_Type == CIP_BYTE_ARRAY && pa_pstInstance->pstClass->nClassID
+          == CIP_ASSEMBLY_CLASS_CODE)
+        {
+          /* we are getting a byte array of a assembly object, kick out to the app callback */
+          OPENER_TRACE_INFO(" -> getAttributeSingle CIP_BYTE_ARRAY\r\n");
+          IApp_BeforeAssemblyDataSend(pa_pstInstance);
+        }
+
+      pa_pstMRResponse->DataLength = outputAttribute(p, pa_acMsg);
+      pa_pstMRResponse->GeneralStatus = CIP_ERROR_SUCCESS;
+      return (EIP_STATUS) pa_pstMRResponse->DataLength;
+    }
+
   return EIP_OK;
 }
 
@@ -503,7 +535,7 @@ outputAttribute(S_CIP_attribute_struct *pa_ptstAttribute, EIP_UINT8 *pa_pnMsg)
       /*TODO Think on how to use the string encoding mechanism*/
       s = (S_CIP_String *) &p[5];
       htols(s->Length, &pa_pnMsg); /* length of string*/
-      counter++;
+      counter += 2;
       for (j = 0; j < s->Length; j++)
         {
           *pa_pnMsg++ = s->String[j];
@@ -534,6 +566,16 @@ outputAttribute(S_CIP_attribute_struct *pa_ptstAttribute, EIP_UINT8 *pa_pnMsg)
     break;
 
   case (CIP_BYTE_ARRAY):
+    {
+      OPENER_TRACE_INFO(" -> get attribute byte array\r\n");
+
+      S_CIP_Byte_Array * p = (S_CIP_Byte_Array *) pa_ptstAttribute->pt2data;
+      for (counter = 0; counter < p->len; counter++)
+        {
+          OPENER_TRACE_INFO("%d: %d\r\n", counter, p->Data[counter]);
+          *pa_pnMsg++ = p->Data[counter];
+        }
+    }
     break;
 
   case (INTERNAL_UINT16_6): /* TODO for port class attribute 9, hopefully we can find a better way to do this*/

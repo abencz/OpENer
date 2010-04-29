@@ -2,8 +2,6 @@
  * Copyright (c) 2009, Rockwell Automation, Inc.
  * All rights reserved. 
  *
- * Contributors:
- *     <date>: <author>, <author email> - changes
  ******************************************************************************/
 #ifndef CIPCONNECTIONMANAGER_H_
 #define CIPCONNECTIONMANAGER_H_
@@ -132,6 +130,7 @@ typedef struct CIP_ConnectionObject
   EIP_INT32 TransmissionTriggerTimer;
   EIP_INT32 InnacitvityWatchdogTimer;
   struct sockaddr_in remote_addr; /* socket address for produce */
+  struct sockaddr_in m_stOriginatorAddr;  /* the address of the originator that established the connection. needed for scanning if the right packet is arriving */
   int sockfd[2]; /* socket handles, indexed by CONSUMING or PRODUCING */
 
   /* pointers to be used in the active connection list */
@@ -146,7 +145,7 @@ typedef struct CIP_ConnectionObject
 /*! Initialize the data of the connection manager object
  */
 EIP_STATUS
-Connection_Manager_Init(void);
+Connection_Manager_Init(EIP_UINT16 pa_nUniqueConnID);
 
 /*!  Get a connected object dependent on requested ConnectionID.
  *   The returned connection may not be in established state. The user has to check
