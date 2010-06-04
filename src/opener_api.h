@@ -60,6 +60,14 @@ configureHostName(const char *pa_acHostName);
 void
 setDeviceSerialNumber(EIP_UINT32 pa_nSerialNumber);
 
+/*!\ingroup CIP_API
+ * Set the current status of the device.
+ *
+ * @param pa_unStatus the new status value
+ */
+void
+setDeviceStatus(EIP_UINT16 pa_unStatus);
+
 /** \ingroup CIP_API 
  * \brief Initialize and setup the CIP-stack
  * 
@@ -69,7 +77,6 @@ setDeviceSerialNumber(EIP_UINT32 pa_nSerialNumber);
  */
 void
 CIP_Init(EIP_UINT16 pa_nUniqueConnID);
-
 
 /** \ingroup CIP_API
  * \brief Shutdown the CIP-stack
@@ -82,7 +89,8 @@ CIP_Init(EIP_UINT16 pa_nUniqueConnID);
  * Memory allocated by the application will not be freed. This has to be done
  * by the application!
  */
-void shutdownCIP(void);
+void
+shutdownCIP(void);
 
 /** \ingroup CIP_API 
  * \brief Get a pointer to a CIP object with given class code
@@ -116,7 +124,7 @@ getCIPInstance(S_CIP_Class *pa_pstObject, EIP_UINT32 pa_nInstanceNr);
  *          0 if instance is not in the object
  */
 S_CIP_attribute_struct *
-getAttribute(S_CIP_Instance * pa_pInstance, EIP_UINT8 pa_nAttributeNr);
+getAttribute(S_CIP_Instance * pa_pInstance, EIP_UINT16 pa_nAttributeNr);
 
 /*! \ingroup CIP_API 
  * \brief Allocate memory for new CIP Class and attributes
@@ -126,9 +134,11 @@ getAttribute(S_CIP_Instance * pa_pInstance, EIP_UINT8 pa_nAttributeNr);
  *  @param pa_nClassID class ID of the new class
  *  @param pa_nNr_of_ClassAttributes number of class attributes
  *  @param pa_nClassGetAttrAllMask mask of which attributes are included in the class getAttributeAll
+ *       If the mask is 0 the getAttributeAll service will not be added as class service
  *  @param pa_nNr_of_ClassServices number of class services
  *  @param pa_nNr_of_InstanceAttributes number of attributes of each instance
  *  @param pa_nInstGetAttrAllMask  mask of which attributes are included in the instance getAttributeAll
+ *       If the mask is 0 the getAttributeAll service will not be added as class service
  *  @param pa_nNr_of_InstanceServices number of instance services
  *  @param pa_nNr_of_Instances number of initial instances to create
  *  @param pa_acName  class name (for debugging class structure)
@@ -182,7 +192,7 @@ addCIPInstance(S_CIP_Class * pa_pstCIPClass, EIP_UINT32 pa_nInstanceId);
  *  @param pa_pt2data pointer to data of attribute.
  */
 void
-insertAttribute(S_CIP_Instance *pa_pInstance, EIP_UINT32 pa_nAttributeNr,
+insertAttribute(S_CIP_Instance *pa_pInstance, EIP_UINT16 pa_nAttributeNr,
     EIP_UINT8 pa_nCIP_Type, void* pa_pt2data);
 
 /** \ingroup CIP_API 
@@ -326,7 +336,6 @@ closeSession(int pa_nSocket);
 EIP_STATUS
 IApp_Init(void);
 
-
 /** \ingroup CIP_CALLBACK_API
  * \brief Inform the application on changes occurred for a connection
  *
@@ -406,7 +415,8 @@ IApp_CipCalloc(unsigned pa_nNumberOfElements, unsigned pa_nSizeOfElement);
  * @param pointer to the allocated memory
  * return
  */
-void IApp_CipFree(void *pa_poData);
+void
+IApp_CipFree(void *pa_poData);
 
 /**\ingroup CIP_CALLBACK_API
  * \brief Inform the application that the Run/Idle State has been changed

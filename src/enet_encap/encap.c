@@ -27,15 +27,6 @@
 #define COMMAND_SENDRRDATA              0x006F
 #define COMMAND_SENDUNITDATA            0x0070
 
-/* definition of status codes in encapsulation protocol */
-#define OPENER_ENCAP_STATUS_SUCCESS                     0x0000
-#define OPENER_ENCAP_STATUS_INVALID_COMMAND             0x0001
-#define OPENER_ENCAP_STATUS_INSUFFICIENT_MEM            0x0002
-#define OPENER_ENCAP_STATUS_INCORRECT_DATA              0x0003
-#define OPENER_ENCAP_STATUS_INVALID_SESSION_HANDLE      0x0064
-#define OPENER_ENCAP_STATUS_INVALID_LENGTH              0x0065
-#define OPENER_ENCAP_STATUS_UNSUPPORTED_PROTOCOL        0x0069  
-
 /* definition of capability flags */
 #define SUPPORT_CIP_TCP                 0x0020
 #define SUPPORT_CIP_UDP_CLASS_0_OR_1    0x0100
@@ -81,9 +72,9 @@ void
 RegisterSession(int pa_nSockfd, struct S_Encapsulation_Data *pa_stReceiveData);
 EIP_STATUS
 UnregisterSession(struct S_Encapsulation_Data *pa_stReceiveData);
-int
+EIP_STATUS
 SendUnitData(struct S_Encapsulation_Data *pa_stReceiveData);
-int
+EIP_STATUS
 SendRRData(struct S_Encapsulation_Data *pa_stReceiveData);
 
 int
@@ -182,7 +173,7 @@ int *pa_nRemainingBytes) /* return how many bytes of the input are left over aft
             break;
 
           case (COMMAND_SENDUNITDATA):
-            nRetVal = SendUnitData(&sEncapData); 
+            nRetVal = SendUnitData(&sEncapData);
             break;
             
           default:
@@ -360,8 +351,6 @@ RegisterSession(int pa_nSockfd, struct S_Encapsulation_Data * pa_stReceiveData)
 /*   INT8 UnregisterSession(struct S_Encapsulation_Data *pa_S_ReceiveData)
  *   close all corresponding TCP connections and delete session handle.
  *      pa_S_ReceiveData pointer to unregister session request with corresponding socket handle.
- *  return status
- * 			0.. success
  */
 EIP_STATUS
 UnregisterSession(struct S_Encapsulation_Data * pa_stReceiveData)
@@ -390,13 +379,13 @@ UnregisterSession(struct S_Encapsulation_Data * pa_stReceiveData)
 /*   INT8 SendUnitData(struct S_Encapsulation_Data *pa_S_ReceiveData)
  *   Call Connection Manager.
  *      pa_S_ReceiveData pointer to structure with data and header information.
- *  return status 	0 .. success.
- * 					-1 .. error
  */
-int
+EIP_STATUS
 SendUnitData(struct S_Encapsulation_Data * pa_stReceiveData)
 {
   EIP_INT16 nSendSize;
+  EIP_STATUS eRetVal = EIP_OK_SEND;
+
   /* Command specific data UDINT .. Interface Handle, UINT .. Timeout, CPF packets */
   /* don't use the data yet */
   ltohl(&pa_stReceiveData->m_acCurrentCommBufferPos); /* skip over null interface handle*/
@@ -406,22 +395,24 @@ SendUnitData(struct S_Encapsulation_Data * pa_stReceiveData)
   if (EIP_ERROR != checkRegisteredSessions(pa_stReceiveData)) /* see if the EIP session is registered*/
     {
       nSendSize
-      = notifyConnectedCPF(pa_stReceiveData->m_acCurrentCommBufferPos,
-          pa_stReceiveData->nData_length,
+      = notifyConnectedCPF(pa_stReceiveData,
           &pa_stReceiveData->m_acCommBufferStart[ENCAPSULATION_HEADER_LENGTH]);
 
       if (0 < nSendSize)
         { /* need to send reply */
           pa_stReceiveData->nData_length = nSendSize;
         }
+      else
+        {
+          eRetVal = EIP_ERROR;
+        }
     }
   else
     { /* received a package with non registered session handle */
       pa_stReceiveData->nData_length = 0;
       pa_stReceiveData->nStatus = OPENER_ENCAP_STATUS_INVALID_SESSION_HANDLE;
-      nSendSize = 1; /* we need to send reply*/
     }
-  return nSendSize;
+  return eRetVal;
 }
 
 /*   INT8 SendRRData(struct S_Encapsulation_Data *pa_stReceiveData)
@@ -430,10 +421,11 @@ SendUnitData(struct S_Encapsulation_Data * pa_stReceiveData)
  *  return status 	0 .. success.
  * 					-1 .. error
  */
-int
+EIP_STATUS
 SendRRData(struct S_Encapsulation_Data * pa_stReceiveData)
 {
   EIP_INT16 nSendSize;
+  EIP_STATUS eRetVal = EIP_OK_SEND;
   /* Commandspecific data UDINT .. Interface Handle, UINT .. Timeout, CPF packets */
   /* don't use the data yet */
   ltohl(&pa_stReceiveData->m_acCurrentCommBufferPos); /* skip over null interface handle*/
@@ -443,22 +435,25 @@ SendRRData(struct S_Encapsulation_Data * pa_stReceiveData)
   if (EIP_ERROR != checkRegisteredSessions(pa_stReceiveData)) /* see if the EIP session is registered*/
     {
       nSendSize
-      = notifyCPF(pa_stReceiveData->m_acCurrentCommBufferPos,
-          pa_stReceiveData->nData_length,
+      = notifyCPF(pa_stReceiveData,
           &pa_stReceiveData->m_acCommBufferStart[ENCAPSULATION_HEADER_LENGTH]);
 
-      if (nSendSize > 0)
+      if (nSendSize >= 0)
         { /* need to send reply */
           pa_stReceiveData->nData_length = nSendSize;
+        }
+      else
+        {
+          eRetVal = EIP_ERROR;
         }
     }
   else    
     { /* received a package with non registered session handle */
       pa_stReceiveData->nData_length = 0;
       pa_stReceiveData->nStatus = OPENER_ENCAP_STATUS_INVALID_SESSION_HANDLE;
-      nSendSize = 1; /* we need to send reply */
     }
-  return nSendSize;
+
+  return eRetVal;
 }
 
 /*   INT8 getFreeSessionIndex()

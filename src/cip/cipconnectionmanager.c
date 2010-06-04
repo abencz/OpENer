@@ -28,23 +28,6 @@ extern S_CIP_Revision Revison;
 /* values need from tcpipinterface */
 extern EIP_UINT32 g_nMultiCastAddress;
 
-/* Connection Manager Error codes */
-#define CIP_CON_MGR_SUCCESS 0x00
-#define CIP_CON_MGR_ERROR_CONNECTION_IN_USE 0x0100
-#define CIP_CON_MGR_ERROR_TRANSPORT_TRIGGER_NOT_SUPPORTED 0x0103
-#define CIP_CON_MGR_ERROR_OWNERSHIP_CONFLICT 0x0106
-#define CIP_CON_MGR_ERROR_CONNECTION_NOT_FOUND_AT_TARGET_APPLICATION 0x0107
-#define CIP_CON_MGR_ERROR_INVALID_CONNECTION_TYPE 0x0108
-#define CIP_CON_MGR_ERROR_INVALID_CONNECTION_SIZE 0x0109  
-#define CIP_CON_MGR_ERROR_NO_MORE_CONNECTIONS_AVAILABLE 0x0113
-#define CIP_CON_MGR_ERROR_VENDERID_OR_PRODUCTCODE_ERROR 0x0114
-#define CIP_CON_MGR_ERROR_VENDERID_OR_PRODUCT_TYPE_ERROR 0x0115
-#define CIP_CON_MGR_ERROR_REVISION_MISMATCH 0x0116
-#define CIP_CON_MGR_ERROR_INVALID_CONNECTION_POINT 0x0117
-#define CIP_CON_MGR_ERROR_INVALID_CONFIGURATION_FORMAT 0x0118
-#define CIP_CON_MGR_ERROR_PARAMETER_ERROR_IN_UNCONNECTED_SEND_SERVICE 0x0205
-#define CIP_CON_MGR_ERROR_INVALID_SEGMENT_TYPE_IN_PATH 0x0315
-
 #define CIP_CONN_PATH_INVALID 1
 #define CIP_CONN_PATH_CONFIGURATION 2
 #define CIP_CONN_PATH_CONSUMPTION 3
@@ -87,8 +70,8 @@ S_CIP_ConnectionObject
 
 /* buffers for the config data coming with a forward open request.
  */
-EIP_UINT8 *g_pnConfigDataBuffer;
-unsigned int g_unConfigDataLen;
+EIP_UINT8 *g_pnConfigDataBuffer = NULL;
+unsigned int g_unConfigDataLen = 0;
 
 /*! value holds the connection ID's "incarnation ID" in the upper 16 bits */
 EIP_UINT32 g_nIncarnationID;
@@ -100,10 +83,7 @@ ForwardOpen(S_CIP_Instance * pa_pstInstance, S_CIP_MR_Request * pa_MRRequest,
 EIP_STATUS
 ForwardClose(S_CIP_Instance * pa_pstInstance, S_CIP_MR_Request * pa_MRRequest,
     S_CIP_MR_Response * pa_MRResponse, EIP_UINT8 * pa_msg);
-EIP_STATUS
-UnconnectedSend(S_CIP_Instance * pa_pstInstance,
-    S_CIP_MR_Request * pa_MRRequest, S_CIP_MR_Response * pa_MRResponse,
-    EIP_UINT8 * pa_msg); /* for originating and routing devices */
+
 EIP_STATUS
 GetConnectionOwner(S_CIP_Instance * pa_pstInstance,
     S_CIP_MR_Request * pa_MRRequest, S_CIP_MR_Response * pa_MRResponse,
@@ -287,7 +267,7 @@ Connection_Manager_Init(EIP_UINT16 pa_nUniqueConnID)
   0, /* # of class services */
   0, /* # of instance attributes */
   0xffffffff, /* instance getAttributeAll mask */
-  4, /* # of instance services */
+  3, /* # of instance services */
   1, /* # of instances */
   "connection manager", /* class name */
   1); /* revision */
@@ -300,8 +280,6 @@ Connection_Manager_Init(EIP_UINT16 pa_nUniqueConnID)
       "ForwardClose");
   insertService(pstConnectionManager, CIP_GET_CONNECTION_OWNER,
       &GetConnectionOwner, "GetConnectionOwner");
-  insertService(pstConnectionManager, CIP_UNCONNECTED_SEND, &UnconnectedSend,
-      "UnconnectedSend");
 
   g_nIncarnationID = ((EIP_UINT32) pa_nUniqueConnID) << 16;
 
@@ -434,8 +412,10 @@ ForwardOpen(S_CIP_Instance *pa_pstInstance, S_CIP_MR_Request *pa_MRRequest,
           CIP_ERROR_CONNECTION_FAILURE, CIP_CON_MGR_ERROR_CONNECTION_IN_USE,
           pa_msg);
     }
-  /* set state to configuring */
-  g_stDummyConnectionObject.State = CONN_STATE_CONFIGURING;
+  /* keep it to none existent till the setup is done this eases error handling and
+   * the state changes within the forward open request can not be detected from
+   * the application or from outside (reason we are single threaded)*/
+  g_stDummyConnectionObject.State = CONN_STATE_NONEXISTENT;
   g_stDummyConnectionObject.SequenceCountProducing = 0; /* set the sequence count to zero */
 
   g_stDummyConnectionObject.ConnectionTimeoutMultiplier = *pa_MRRequest->Data++;
@@ -448,6 +428,11 @@ ForwardOpen(S_CIP_Instance *pa_pstInstance, S_CIP_MR_Request *pa_MRRequest,
 
   g_stDummyConnectionObject.O_to_T_RPI = ltohl(&pa_MRRequest->Data);
 
+
+  g_stDummyConnectionObject.O_to_T_NetworkConnectionParameter = ltohs(
+      &pa_MRRequest->Data);
+  g_stDummyConnectionObject.T_to_O_RPI = ltohl(&pa_MRRequest->Data);
+
   tmp = g_stDummyConnectionObject.T_to_O_RPI % (OPENER_TIMER_TICK * 1000);
   if (tmp > 0)
     {
@@ -456,10 +441,6 @@ ForwardOpen(S_CIP_Instance *pa_pstInstance, S_CIP_MR_Request *pa_MRRequest,
               / (OPENER_TIMER_TICK * 1000)) * (OPENER_TIMER_TICK * 1000)
               + (OPENER_TIMER_TICK * 1000);
     }
-
-  g_stDummyConnectionObject.O_to_T_NetworkConnectionParameter = ltohs(
-      &pa_MRRequest->Data);
-  g_stDummyConnectionObject.T_to_O_RPI = ltohl(&pa_MRRequest->Data);
 
   g_stDummyConnectionObject.T_to_O_NetworkConnectionParameter = ltohs(
       &pa_MRRequest->Data);
@@ -848,53 +829,6 @@ ForwardClose(S_CIP_Instance *pa_pstInstance, S_CIP_MR_Request * pa_MRRequest,
   return assembleFWDCloseResponse(ConnectionSerialNr, OriginatorVendorID,
       OriginatorSerialNr, pa_MRRequest, pa_MRResponse, nConnectionStatus,
       pa_msg);
-}
-
-EIP_STATUS
-UnconnectedSend(S_CIP_Instance * pa_pstInstance,
-    S_CIP_MR_Request * pa_MRRequest, S_CIP_MR_Response * pa_MRResponse,
-    EIP_UINT8 * pa_msg)
-{
-  EIP_UINT8 *p;
-  S_CIP_UnconnectedSend_Param_Struct data;
-  S_Data_Item stDataItem;
-
-  /*Suppress compiler warning*/
-  (void) pa_pstInstance;
-  (void) pa_MRResponse;
-  (void) pa_msg;
-
-  p = pa_MRRequest->Data;
-  data.Priority = *p++;
-  data.Timeout_Ticks = *p++;
-  data.Message_Request_Size = ltohs(&p);
-
-  if (data.Message_Request_Size != 0)
-    {
-      stDataItem.TypeID = g_stCPFDataItem.stDataI_Item.TypeID;
-      stDataItem.Length = data.Message_Request_Size;
-      stDataItem.Data = p;
-    }
-
-  p = pa_MRRequest->Data + 4 + data.Message_Request_Size;
-  /* check for padding */
-  if (data.Message_Request_Size % 2 != 0)
-    p++;
-
-  data.Route_Path.PathSize = *p++;
-  data.Reserved = *p++;
-  if (data.Route_Path.PathSize == 1)
-    {
-      data.Route_Path.Port = *p++;
-      data.Route_Path.Address = *p;
-    }
-  else
-    {
-      /*TODO: other packet received */
-      OPENER_TRACE_WARN("Warning: Route path data of unconnected send currently not handled\n");
-    }
-  /*TODO correctly handle the path, currently we just ignore it and forward to the message router which should be ok for non routing devices*/
-  return notifyMR(stDataItem.Data, data.Message_Request_Size);
 }
 
 EIP_STATUS
@@ -1680,7 +1614,7 @@ closeConnection(S_CIP_ConnectionObject *pa_pstConnObj)
       IApp_CloseSocket(pa_pstConnObj->sockfd[CONSUMING]);
       pa_pstConnObj->sockfd[CONSUMING] = EIP_INVALID_SOCKET;
       IApp_CloseSocket(pa_pstConnObj->sockfd[PRODUCING]);
-      pa_pstConnObj->sockfd[CONSUMING] = EIP_INVALID_SOCKET;
+      pa_pstConnObj->sockfd[PRODUCING] = EIP_INVALID_SOCKET;
     }
   removeFromeActiveConnections(pa_pstConnObj);
 }
