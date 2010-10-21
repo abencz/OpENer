@@ -129,7 +129,6 @@ IApp_AfterAssemblyDataReceived(S_CIP_Instance *pa_pstInstance)
       /* Data for the output assembly has been received.
        * Mirror it to the inputs */
       memcpy(&g_assemblydata301[0], &g_assemblydata302[0], sizeof(g_assemblydata301));
-printf("%d\n", g_assemblydata302[0]);
     }
   else if (pa_pstInstance->nInstanceNr == DEMO_APP_EXPLICT_ASSEMBLY_NUM)
     {
