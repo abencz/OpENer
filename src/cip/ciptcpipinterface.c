@@ -40,14 +40,15 @@ S_CIP_String Hostname = /* #6 */
 EIP_UINT32 g_nMultiCastAddress;
 
 EIP_STATUS
-configureNetworkInterface(const char *pa_acIpAdress,
-    const char *pa_acSubNetMask, const char *pa_acGateway)
+configureNetworkInterface(	const EIP_UINT32 pa_nIpAdress,
+				const EIP_UINT32 pa_nSubNetMask,
+				const EIP_UINT32 pa_nGateway)
 {
   EIP_UINT32 nHostId;
   
-  Interface_Configuration.IPAddress = inet_addr(pa_acIpAdress);
-  Interface_Configuration.NetworkMask = inet_addr(pa_acSubNetMask);
-  Interface_Configuration.Gateway = inet_addr(pa_acGateway);
+  Interface_Configuration.IPAddress = pa_nIpAdress;
+  Interface_Configuration.NetworkMask = pa_nSubNetMask;
+  Interface_Configuration.Gateway = pa_nGateway;
 
   /* calculate the CIP multicast address. The multicast address is calculated, not input*/
   nHostId = ntohl(Interface_Configuration.IPAddress) & ~ ntohl(

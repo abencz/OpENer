@@ -27,8 +27,9 @@
  *  @return EIP_OK if the configuring worked otherwise EIP_ERROR
  */
 EIP_STATUS
-configureNetworkInterface(const char *pa_acIpAdress,
-    const char *pa_acSubNetMask, const char *pa_acGateway);
+configureNetworkInterface(	const unsigned long pa_nIpAdress,
+				const unsigned long pa_nSubNetMask,
+				const unsigned long pa_nGateway);
 
 /*! \ingroup CIP_API 
  * \brief Configure the MAC address of the device
@@ -530,7 +531,7 @@ IApp_CloseSocket(int pa_nSockFd);
  *   -# Configure the network properties:\n
  *       With the following functions the network interface of OpENer is 
  *       configured:
- *        - EIP_STATUS configureNetworkInterface(const char *pa_acIpAdress, const char *pa_acSubNetMask, const char *pa_acGateway)
+ *        - EIP_STATUS configureNetworkInterface(const unsigned long pa_nIpAdress, const unsigned long pa_nSubNetMask, const unsigned long pa_nGateway)
  *        - void configureMACAddress(const EIP_UINT8 *pa_acMACAddress)
  *        - void configureDomainName(const char *pa_acDomainName)
  *        - void configureHostName(const char *pa_acHostName)
