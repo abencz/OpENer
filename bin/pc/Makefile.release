@@ -13,7 +13,7 @@ CFLAGS= \
 	-I ../../src/enet_encap \
 	-I ../../src/cip \
 	-I ../../src/ports/platform-pc \
-	-W -Wall -ansi
+	-W -Wall -ansi -std=c99
 
 LDFLAGS=
 
@@ -26,7 +26,7 @@ SOURCES= \
 	../../src/cip/ciptcpipinterface.c \
 	../../src/cip/cipidentity.c \
 	../../src/cip/cipethernetlink.c \
-	../../src/cip/appcontype.c  \
+	../../src/cip/appcontype.c \
 	../../src/enet_encap/cpf.c \
 	../../src/enet_encap/endianconv.c \
 	../../src/enet_encap/encap.c \

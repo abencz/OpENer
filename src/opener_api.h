@@ -461,12 +461,20 @@ IApp_SendUDPData(struct sockaddr_in *pa_pstAddr, int pa_nSockFd,
     EIP_UINT8 *pa_acData, EIP_UINT16 pa_nDataLength);
 
 /**\ingroup CIP_CALLBACK_API 
- * \brief Close the given socket and clean up the stack 
+ * \brief Close the given TCP socket and clean up the stack 
  * 
  * @param pa_nSockFd socket descriptor to close
  */
 void
-IApp_CloseSocket(int pa_nSockFd);
+IApp_CloseTCPSocket(int pa_nSockFd);
+
+/**\ingroup CIP_CALLBACK_API 
+ * \brief Close the given UDP socket and clean up the stack 
+ * 
+ * @param pa_nSockFd socket descriptor to close
+ */
+void
+IApp_CloseUDPSocket(int pa_nSockFd);
 
 /*! \mainpage OpENer - Open Source EtherNet/IP(TM) Communication Stack Documentation
  *

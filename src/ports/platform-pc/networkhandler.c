@@ -343,8 +343,8 @@ Start_NetworkHandler()
         }
     }
 
-  IApp_CloseSocket(nTCPListener);
-  IApp_CloseSocket(nUDPListener);
+  IApp_CloseTCPSocket(nTCPListener);
+  IApp_CloseUDPSocket(nUDPListener);
   return EIP_OK;
 }
 
@@ -448,7 +448,7 @@ handleDataOnTCPSocket(int pa_nSocket)
       return EIP_ERROR;
     }
 
-  if (nCheckVal == unDataSize)
+  if ((unsigned)nCheckVal == unDataSize)
     {
       /*we got the right amount of data */
       unDataSize += 4;
@@ -546,10 +546,22 @@ IApp_CreateUDPSocket(int pa_nDirection, struct sockaddr_in *pa_pstAddr)
 }
 
 void
-IApp_CloseSocket(int pa_nSockFd)
+IApp_CloseUDPSocket(int pa_nSockFd)
 {
 
-  OPENER_TRACE_INFO("networkhandler: closing socket %d\n", pa_nSockFd);
+  OPENER_TRACE_INFO("networkhandler: closing UDP socket %d\n", pa_nSockFd);
+  if (EIP_INVALID_SOCKET != pa_nSockFd)
+    {
+      FD_CLR(pa_nSockFd, &master);
+      shutdown(pa_nSockFd, SHUT_RDWR);
+      close(pa_nSockFd);
+    }
+}
+
+void
+IApp_CloseTCPSocket(int pa_nSockFd)
+{
+  OPENER_TRACE_INFO("networkhandler: closing TCP socket %d\n", pa_nSockFd);
   if (EIP_INVALID_SOCKET != pa_nSockFd)
     {
       FD_CLR(pa_nSockFd, &master);

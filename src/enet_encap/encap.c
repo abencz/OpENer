@@ -364,7 +364,7 @@ UnregisterSession(struct S_Encapsulation_Data * pa_stReceiveData)
       i = pa_stReceiveData->nSession_handle - 1;
       if (EIP_INVALID_SOCKET != anRegisteredSessions[i])
         {
-          IApp_CloseSocket(anRegisteredSessions[i]);
+          IApp_CloseTCPSocket(anRegisteredSessions[i]);
           anRegisteredSessions[i] = EIP_INVALID_SOCKET;
           return EIP_OK;
         }
@@ -534,7 +534,7 @@ closeSession(int pa_nSocket)
     {
       if (anRegisteredSessions[i] == pa_nSocket)
         {
-          IApp_CloseSocket(pa_nSocket);
+          IApp_CloseTCPSocket(pa_nSocket);
           anRegisteredSessions[i] = EIP_INVALID_SOCKET;
           break;
         }
@@ -547,7 +547,7 @@ void encapShutDown(void){
       {
         if (EIP_INVALID_SOCKET == anRegisteredSessions[i])
           {
-            IApp_CloseSocket(anRegisteredSessions[i]);
+            IApp_CloseTCPSocket(anRegisteredSessions[i]);
             anRegisteredSessions[i] = EIP_INVALID_SOCKET;
           }
       }
