@@ -1,0 +1,4 @@
+stellaris/    - The source code for the Stellaris ports.
+smartfusion/  - The source code for the Actel Smartfusion ports.
+
+See also the FILES file in each subdirectory.
