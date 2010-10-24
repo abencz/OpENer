@@ -30,6 +30,11 @@
 #define EIP_DFLOAT	double
 #define EIP_BOOL8	bool
 
+#ifdef OPENER_SUPPORT_64BIT_DATATYPES
+#define EIP_INT64       long long
+#define EIP_UINT64       unsigned long long
+#endif
+
 /*! Constant identifying if a socket descriptor is invalid
  */
 #define EIP_INVALID_SOCKET      -1

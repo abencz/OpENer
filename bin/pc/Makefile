@@ -47,7 +47,7 @@ OBJECTS= \
 	../../src/cip/ciptcpipinterface.o \
 	../../src/cip/cipidentity.o \
 	../../src/cip/cipethernetlink.o \
-	../../src/cip/appcontype.o \
+	../../src/cip/appcontype.o  \
 	../../src/enet_encap/cpf.o \
 	../../src/enet_encap/endianconv.o \
 	../../src/enet_encap/encap.o
@@ -62,7 +62,7 @@ SPLINTFLAGS = -I../../src \
 EXECUTABLE=opener
 
 
-all: $(SOURCES) $(EXECUTABLE)
+all: $(SOURCES) $(EXECUTABLE)	
 	
 splint:
 	splint $(SPLINTFLAGS) $(SOURCES) 
