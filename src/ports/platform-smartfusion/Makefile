@@ -173,7 +173,7 @@ LIBS=	-lmyLib \
 	-lsprintf
 
 SUBDIRS=${MYLIB} ${SPRINTF}
-	
+
 all: $(PROGRAM).axf
 
 $(PROGRAM).axf: $(OBJS) ${LDSCRIPT} subdirs Makefile
@@ -220,9 +220,7 @@ clean:
 	@echo "  [CLEAN]"
 	@-$(RM) -f $(OBJS) *.axf *.bin *.map *.i *.disasm .deps/* 2> $(NULL) 
 
-
 realclean : clean
 	@echo "  REALCLEAN"
 	$(MAKE) -C ${MYLIB} clean
 	$(MAKE) -C ${SPRINTF} clean
-

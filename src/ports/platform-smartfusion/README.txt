@@ -60,10 +60,10 @@ UNPACK AND INSTALL
 
 After downloading and unpacking the opENer distribution, unzip the file
 HW_SmartFusion_demo_verilog.zip, found in src/ports, in place. It will
-add its contents to the HW_SmartFusion_demo_verilog directory initially
-contains the SmartFusion chip driver library. The zip file contains the
-FPGA hardware deisgn files. If you have WinZip or WinRar, simply right
-click the zip file and select "Extract to here".
+add the contents of the Libero hardware project to the HW_SmartFusion_demo_verilog
+directory. Initially this directory contains only the SmartFusion chip
+driver library. If you have WinZip or WinRar, simply right click the zip
+file and select "Extract to here".
 
 You will need to download and install the latest version of Libero (the FPGA
 tools) and SoftConsole (the software tools) from the Actel website.
@@ -158,14 +158,20 @@ OR
 Build from SoftConsole
 ----------------------
 
-Start SoftConsole. I assume you are already somewhat familiar with Eclipse.
-Open the workspace in \src\ports.
-Project->Build All.
+Start SoftConsole.
+Set the workspace to C:\tmp\opener-Actel\src\ports.
+File->New->C Project
+Project Name: type in platform-smartfusion
+(ignore the warning: "Directory with specified name already exists.")
+Makefile Project -> Empty Project
+Finish
+Project->Build All
+(click on Console to watch what's happening)
 
 Run debug configuration "platform-smartfusion". This will program the firmware
 into the chip.
 
-Start a terminal windows for the serial/USB console. You may have to figure out
+Start a terminal window for the serial/USB console. You may have to figure out
 which port is being used using Device Manager. The serial configuration is
 115200-N-8-1.
 

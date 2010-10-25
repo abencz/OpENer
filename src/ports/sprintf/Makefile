@@ -1,12 +1,14 @@
 #customization: make sure the following point to sensible places:
 
+ifndef CROSS
 # The prefix of the cross compiler commands --
 # Use this if your path points to the cross compiler's bin directory:
-CROSS=arm-none-eabi-
+
+#CROSS=arm-none-eabi-
 
 # else modify this line to suit:
-#CROSS=c:/cross/softconsole-v3.2/sourcery-g++/bin/arm-none-eabi-
-
+CROSS=c:/cross/softconsole-v3.2/sourcery-g++/bin/arm-none-eabi-
+endif
 
 PROGRAM=libsprintf
 

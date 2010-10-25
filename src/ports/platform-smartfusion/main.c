@@ -49,10 +49,9 @@
 #include "parm.h"
 
 
-
+struct netif MACB_if;						// low level Ethernet interface struct required by lwIP
 
 unsigned char MacAddress[6];					// RAM copy of the MAC ID
-struct netif MACB_if;						// low level Ethernet interface struct required by lwIP
 char hostname[16];						// ram copy of the hostname
 struct ip_addr xIpAddr, xNetMask, xGateway;			// ram copy of ip address, etc.
 u32_t lastIpAddr=-1, lastNetMask=-1, lastGateway=-1;		// last known ip address, etc.
@@ -62,7 +61,6 @@ u32_t lastIpAddr=-1, lastNetMask=-1, lastGateway=-1;		// last known ip address, 
 #define Gateway MACB_if.gw.addr
 
 
-extern void ethernetif_input( void * pvParameters );
 
 
 // defines lifted from Actel's lwIP demo
@@ -417,7 +415,6 @@ THREAD(background, unsigned arg)
       wake(0, &waitEnetPoll);                           // poll the Ethernet thread
     }
 }
-
 
 
 // main
