@@ -7,14 +7,18 @@
 # Author: Jonathan Engdahl jrengdahl@ra.rockwell.com
 ####################################################
 
-#customization: make sure the following point to sensible places:
+ifndef CROSS
 
-# The prefix of the cross compiler commands --
+#if CROSS is not externally defined, 
+#then it must be defined here. Unncomment one of the following definitions:
+
 # Use this if your path points to the cross compiler's bin directory:
-#CROSS=arm-none-eabi-
+#CROSS=
 
 # else modify this line to suit:
-CROSS=c:/cross/softconsole-v3.2/sourcery-g++/bin/arm-none-eabi-
+CROSS=c:/cross/softconsole-v3.2/sourcery-g++/bin
+
+endif
 
 
 PROGRAM=main
@@ -47,16 +51,25 @@ NULL=NUL:
 endif
 
 
-CC=$(CROSS)gcc
-CP=$(CROSS)g++
-AS=$(CROSS)as
-AR=$(CROSS)ar
-LD=$(CROSS)gcc
-OBJCOPY=$(CROSS)objcopy
-OBJDUMP=$(CROSS)objdump
-NM=$(CROSS)nm
-MAKE=${shell type make > $(NULL) 2>&1 && echo make || echo cs-make}
-RM=${shell type rm > $(NULL) 2>&1 && echo rm || echo cs-rm}
+PREFIX = $(CROSS)/arm-none-eabi-
+CC=$(PREFIX)gcc
+CP=$(PREFIX)g++
+AS=$(PREFIX)as
+AR=$(PREFIX)ar
+LD=$(PREFIX)gcc
+OBJCOPY=$(PREFIX)objcopy
+OBJDUMP=$(PREFIX)objdump
+NM=$(PREFIX)nm
+MAKE=${shell $(CROSS)/make --version > $(NULL) 2>&1 && echo $(CROSS)/make}
+RM=${shell $(CROSS)/rm --version > $(NULL) -v 2>&1 && echo $(CROSS)/rm}
+ifeq (,$(MAKE))
+MAKE=${shell $(CROSS)/cs-make --version > $(NULL) 2>&1 && echo $(CROSS)/cs-make}
+RM=${shell $(CROSS)/cs-rm --version > $(NULL) 2>&1 && echo $(CROSS)/cs-rm}
+endif
+ifeq (,$(MAKE))
+MAKE=make
+RM=rm
+endif
 
 CPU=-mcpu=cortex-m3
 THUMB=-mthumb
@@ -213,14 +226,13 @@ endif
 subdirs: $(SUBDIRS)
 	
 $(SUBDIRS):
-	@echo "  DIR   ${<}"
-	@$(MAKE) -C $@
+	@$(MAKE) -C $@ CROSS=$(CROSS)
 
 clean:
 	@echo "  [CLEAN]"
-	@-$(RM) -f $(OBJS) *.axf *.bin *.map *.i *.disasm .deps/* 2> $(NULL) 
+	@-$(RM) -rf $(OBJS) *.axf *.bin *.map *.disasm .deps 2> $(NULL) 
 
 realclean : clean
 	@echo "  REALCLEAN"
-	$(MAKE) -C ${MYLIB} clean
-	$(MAKE) -C ${SPRINTF} clean
+	$(MAKE) -C ${MYLIB}    CROSS=$(CROSS) clean
+	$(MAKE) -C ${SPRINTF}  CROSS=$(CROSS) clean
