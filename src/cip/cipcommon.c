@@ -25,15 +25,11 @@
 EIP_UINT8 g_acMessageDataReplyBuffer[OPENER_MESSAGE_DATA_REPLY_BUFFER];
 
 /* private functions*/
-/*! Produce the given attribute the message buffer.   
- * 
- *  @param pa_ptstAttribute pointer to CIP attribute structure.
- *  @param pa_pnMsg pointer to memory where response should be written
- *  @return length of attribute in bytes
- *          -1 .. error
- */
 int
-outputAttribute(S_CIP_attribute_struct *pa_ptstAttribute, EIP_UINT8 *pa_pnMsg);
+encodeData(EIP_UINT8 pa_nCIP_Type, void *pa_pt2data, EIP_UINT8 **pa_pnMsg);
+
+int
+encodeEPath(S_CIP_EPATH *pa_pstEPath, EIP_UINT8 **pa_pnMsg);
 
 void
 CIP_Init(EIP_UINT16 pa_nUniqueConnID)
@@ -405,7 +401,8 @@ getAttributeSingle(S_CIP_Instance *pa_pstInstance,
           IApp_BeforeAssemblyDataSend(pa_pstInstance);
         }
 
-      pa_pstMRResponse->DataLength = outputAttribute(p, pa_acMsg);
+      pa_pstMRResponse->DataLength = encodeData(p->CIP_Type, p->pt2data,
+          &pa_acMsg);
       pa_pstMRResponse->GeneralStatus = CIP_ERROR_SUCCESS;
     }
 
@@ -413,33 +410,33 @@ getAttributeSingle(S_CIP_Instance *pa_pstInstance,
 }
 
 int
-outputAttribute(S_CIP_attribute_struct *pa_ptstAttribute, EIP_UINT8 *pa_pnMsg)
+encodeData(EIP_UINT8 pa_nCIP_Type, void *pa_pt2data, EIP_UINT8 **pa_pnMsg)
 {
-  int j;
   int counter = 0;
 
-  switch (pa_ptstAttribute->CIP_Type)
+  switch (pa_nCIP_Type)
     /* check the datatype of attribute */
     {
   case (CIP_BOOL):
   case (CIP_SINT):
   case (CIP_USINT):
   case (CIP_BYTE):
-    *pa_pnMsg++ = *(EIP_UINT8 *) (pa_ptstAttribute->pt2data);
+    **pa_pnMsg = *(EIP_UINT8 *) (pa_pt2data);
+    ++(*pa_pnMsg);
     counter = 1;
     break;
 
   case (CIP_INT):
   case (CIP_UINT):
   case (CIP_WORD):
-    htols(*(EIP_UINT16 *) (pa_ptstAttribute->pt2data), &pa_pnMsg);
+    htols(*(EIP_UINT16 *) (pa_pt2data), pa_pnMsg);
     counter = 2;
     break;
 
   case (CIP_DINT):
   case (CIP_UDINT):
   case (CIP_DWORD):
-    htoll(*(EIP_UINT32 *) (pa_ptstAttribute->pt2data), &pa_pnMsg);
+    htoll(*(EIP_UINT32 *) (pa_pt2data), pa_pnMsg);
     counter = 4;
     break;
 
@@ -457,18 +454,18 @@ outputAttribute(S_CIP_attribute_struct *pa_ptstAttribute, EIP_UINT8 *pa_pnMsg)
     break;
   case (CIP_STRING):
     {
-      S_CIP_String *s = (S_CIP_String *) pa_ptstAttribute->pt2data;
+      S_CIP_String *s = (S_CIP_String *) pa_pt2data;
 
-      htols(*(EIP_UINT16 *) &(s->Length), &pa_pnMsg);
-      for (j = 0; j < s->Length; j++)
-        {
-          *pa_pnMsg++ = s->String[j];
-        }
+      htols(*(EIP_UINT16 *) &(s->Length), pa_pnMsg);
+      memcpy(*pa_pnMsg, s->String, s->Length);
+      *pa_pnMsg += s->Length;
+
       counter = s->Length + 2; /* we have a two byte length field */
       if (counter & 0x01)
         {
           /* we have an odd byte count */
-          *pa_pnMsg++ = 0;
+          **pa_pnMsg = 0;
+          ++(*pa_pnMsg);
           counter++;
         }
       break;
@@ -482,13 +479,14 @@ outputAttribute(S_CIP_attribute_struct *pa_ptstAttribute, EIP_UINT8 *pa_pnMsg)
 
   case (CIP_SHORT_STRING):
     {
-      S_CIP_Short_String *ss = (S_CIP_Short_String *) pa_ptstAttribute->pt2data;
+      S_CIP_Short_String *ss = (S_CIP_Short_String *) pa_pt2data;
 
-      *pa_pnMsg++ = ss->Length;
-      for (j = 0; j < ss->Length; j++)
-        {
-          *pa_pnMsg++ = ss->String[j];
-        }
+      **pa_pnMsg = ss->Length;
+      ++(*pa_pnMsg);
+
+      memcpy(*pa_pnMsg, ss->String, ss->Length);
+      *pa_pnMsg += ss->Length;
+
       counter = ss->Length + 1;
       break;
     }
@@ -497,21 +495,7 @@ outputAttribute(S_CIP_attribute_struct *pa_ptstAttribute, EIP_UINT8 *pa_pnMsg)
     break;
 
   case (CIP_EPATH):
-    {
-      EIP_UINT16 *p = (EIP_UINT16 *) pa_ptstAttribute->pt2data;
-      EIP_UINT16 len;
-      EIP_UINT16 data;
-
-      len = *p++;
-      htols(len, &pa_pnMsg);
-      counter = 2;
-      while (len--)
-        {
-          data = *p++;
-          htols(data, &pa_pnMsg);
-          counter += 2;
-        }
-    }
+    counter = encodeEPath((S_CIP_EPATH *) pa_pt2data, pa_pnMsg);
     break;
 
   case (CIP_ENGUNIT):
@@ -519,52 +503,35 @@ outputAttribute(S_CIP_attribute_struct *pa_ptstAttribute, EIP_UINT8 *pa_pnMsg)
 
   case (CIP_USINT_USINT):
     {
-      S_CIP_Revision *rv = (S_CIP_Revision *) pa_ptstAttribute->pt2data;
+      S_CIP_Revision *rv = (S_CIP_Revision *) pa_pt2data;
 
-      *pa_pnMsg++ = rv->MajorRevision;
-      *pa_pnMsg++ = rv->MinorRevision;
+      **pa_pnMsg = rv->MajorRevision;
+      ++(*pa_pnMsg);
+      **pa_pnMsg = rv->MinorRevision;
+      ++(*pa_pnMsg);
       counter = 2;
       break;
     }
 
   case (CIP_UDINT_UDINT_UDINT_UDINT_UDINT_STRING):
     {
-      EIP_UINT32 *p = (EIP_UINT32 *) pa_ptstAttribute->pt2data;
-      S_CIP_String *s;
-
-      htoll(p[0], &pa_pnMsg);
-      htoll(p[1], &pa_pnMsg);
-      htoll(p[2], &pa_pnMsg);
-      htoll(p[3], &pa_pnMsg);
-      htoll(p[4], &pa_pnMsg);
+      /* TCP/IP attribute 5 */
+      S_CIP_TCPIPNetworkInterfaceConfiguration *p =
+          (S_CIP_TCPIPNetworkInterfaceConfiguration *) pa_pt2data;
+      htoll(ntohl(p->IPAddress), pa_pnMsg);
+      htoll(ntohl(p->NetworkMask), pa_pnMsg);
+      htoll(ntohl(p->Gateway), pa_pnMsg);
+      htoll(ntohl(p->NameServer), pa_pnMsg);
+      htoll(ntohl(p->NameServer2), pa_pnMsg);
       counter = 20;
-      /* handle the string */
-      /*TODO Think on how to use the string encoding mechanism*/
-      s = (S_CIP_String *) &p[5];
-      htols(s->Length, &pa_pnMsg); /* length of string*/
-      counter += 2;
-      for (j = 0; j < s->Length; j++)
-        {
-          *pa_pnMsg++ = s->String[j];
-          counter++;
-        }
-
-      if (counter & 1)
-        { /* odd bytes in string -> insert pad byte */
-          *pa_pnMsg++ = 0;
-          counter++;
-        }
+      counter += encodeData(CIP_STRING, &(p->DomainName), pa_pnMsg);
       break;
     }
 
   case (CIP_6USINT):
     {
-      EIP_UINT8 *p = (EIP_UINT8 *) pa_ptstAttribute->pt2data;
-
-      for (j = 0; j < 6; j++)
-        {
-          *pa_pnMsg++ = p[j];
-        }
+      EIP_UINT8 *p = (EIP_UINT8 *) pa_pt2data;
+      memcpy(*pa_pnMsg, p, 6);
       counter = 6;
       break;
     }
@@ -575,26 +542,23 @@ outputAttribute(S_CIP_attribute_struct *pa_ptstAttribute, EIP_UINT8 *pa_pnMsg)
   case (CIP_BYTE_ARRAY):
     {
       OPENER_TRACE_INFO(" -> get attribute byte array\r\n");
-
-      S_CIP_Byte_Array * p = (S_CIP_Byte_Array *) pa_ptstAttribute->pt2data;
-      for (counter = 0; counter < p->len; counter++)
-        {
-          OPENER_TRACE_INFO("%d: %d\r\n", counter, p->Data[counter]);
-          *pa_pnMsg++ = p->Data[counter];
-        }
+      S_CIP_Byte_Array * p = (S_CIP_Byte_Array *) pa_pt2data;
+      memcpy(*pa_pnMsg, p->Data, p->len);
+      *pa_pnMsg += p->len;
+      counter = p->len;
     }
     break;
 
   case (INTERNAL_UINT16_6): /* TODO for port class attribute 9, hopefully we can find a better way to do this*/
     {
-      EIP_UINT16 *p = (EIP_UINT16 *) pa_ptstAttribute->pt2data;
+      EIP_UINT16 *p = (EIP_UINT16 *) pa_pt2data;
 
-      htols(p[0], &pa_pnMsg);
-      htols(p[1], &pa_pnMsg);
-      htols(p[2], &pa_pnMsg);
-      htols(p[3], &pa_pnMsg);
-      htols(p[4], &pa_pnMsg);
-      htols(p[5], &pa_pnMsg);
+      htols(p[0], pa_pnMsg);
+      htols(p[1], pa_pnMsg);
+      htols(p[2], pa_pnMsg);
+      htols(p[3], pa_pnMsg);
+      htols(p[4], pa_pnMsg);
+      htols(p[5], pa_pnMsg);
       counter = 12;
       break;
     }
@@ -662,3 +626,75 @@ getAttributeAll(S_CIP_Instance * pa_pstInstance,
     }
   return EIP_OK; /* Return 0 if cannot find GET_ATTRIBUTE_SINGLE service*/
 }
+
+int
+encodeEPath(S_CIP_EPATH *pa_pstEPath, EIP_UINT8 **pa_pnMsg)
+{
+  int nLen;
+
+  nLen = pa_pstEPath->PathSize;
+  htols(pa_pstEPath->PathSize, pa_pnMsg);
+
+  if (pa_pstEPath->ClassID < 256)
+    {
+      **pa_pnMsg = 0x20; /*8Bit Class Id */
+      ++(*pa_pnMsg);
+      **pa_pnMsg = (EIP_UINT8) pa_pstEPath->ClassID;
+      ++(*pa_pnMsg);
+      nLen -= 1;
+    }
+  else
+    {
+      **pa_pnMsg = 0x21; /*16Bit Class Id */
+      ++(*pa_pnMsg);
+      **pa_pnMsg = 0; /*padd byte */
+      ++(*pa_pnMsg);
+      htols(pa_pstEPath->ClassID, pa_pnMsg);
+      nLen -= 2;
+    }
+
+  if (0 < nLen)
+    {
+      if (pa_pstEPath->InstanceNr < 256)
+        {
+          **pa_pnMsg = 0x24; /*8Bit Instance Id */
+          ++(*pa_pnMsg);
+          **pa_pnMsg = (EIP_UINT8) pa_pstEPath->InstanceNr;
+          ++(*pa_pnMsg);
+          nLen -= 1;
+        }
+      else
+        {
+          **pa_pnMsg = 0x25; /*16Bit Instance Id */
+          ++(*pa_pnMsg);
+          **pa_pnMsg = 0; /*padd byte */
+          ++(*pa_pnMsg);
+          htols(pa_pstEPath->InstanceNr, pa_pnMsg);
+          nLen -= 2;
+        }
+
+      if (0 < nLen)
+        {
+          if (pa_pstEPath->AttributNr < 256)
+            {
+              **pa_pnMsg = 0x30; /*8Bit Attribute Id */
+              ++(*pa_pnMsg);
+              **pa_pnMsg = (EIP_UINT8) pa_pstEPath->AttributNr;
+              ++(*pa_pnMsg);
+              nLen -= 1;
+            }
+          else
+            {
+              **pa_pnMsg = 0x31; /*16Bit Attribute Id */
+              ++(*pa_pnMsg);
+              **pa_pnMsg = 0; /*padd byte */
+              ++(*pa_pnMsg);
+              htols(pa_pstEPath->AttributNr, pa_pnMsg);
+              nLen -= 2;
+            }
+        }
+    }
+
+  return 2 + pa_pstEPath->PathSize * 2; /*path size is in 16 bit chunks according to the spec */
+}
+

@@ -132,6 +132,10 @@ getIOConnectionForConnectionData(S_CIP_ConnectionObject *pa_pstConnData,
                       *pa_pnExtendedError
                           = CIP_CON_MGR_INVALID_PRODUCED_OR_CONSUMED_APPLICATION_PATH;
                     }
+                  else
+                    {
+                    pa_pstConnData->m_eInstanceType = enConnTypeIOListenOnly;
+                    }
                 }
             }
           else
@@ -270,7 +274,7 @@ getListenOnlyConnection(S_CIP_ConnectionObject * pa_pstConnData,
               break;
             }
 
-          if (NULL != getExistingProdMulticastConnection(
+          if (NULL == getExistingProdMulticastConnection(
               pa_pstConnData->ConnectionPath.ConnectionPoint[1]))
             {
               *pa_pnExtendedError
