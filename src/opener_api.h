@@ -416,7 +416,7 @@ IApp_CipCalloc(unsigned pa_nNumberOfElements, unsigned pa_nSizeOfElement);
  * \brief Free memory allocated by the OpENer
  *
  * emulate the common c-library function free
- * @param pointer to the allocated memory
+ * @param pa_poData pointer to the allocated memory
  * return
  */
 void
