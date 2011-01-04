@@ -1,3 +1,96 @@
+2010-12-17  alil
+
+	* src/cip/cipconnectionmanager.c: fixed wrong endless loop in
+	  isConnectedOutputAssembly
+
+2010-12-16  alil
+
+	* src/cip/cipassembly.c, src/cip/cipconnectionmanager.c,
+	  src/cip/cipconnectionmanager.h: added check in setAttributeSingle
+	  of assembly objects if they are the write target in any open
+	  connection
+	* src/cip/cipconnectionmanager.c, src/ports/platform-pc/main.c:
+	  fixed handling of configuration data
+	* src/ports/platform-pc/opener_user_conf.h: added more than 1
+	  simultaneous connections for listen only and input only
+	* src/cip/appcontype.c: fixed wrong initialization of listen only
+	  connections
+
+2010-12-09  alil
+
+	* src/cip/cipconnectionmanager.c, src/opener_api.h,
+	  src/ports/platform-pc/networkhandler.c: moved checking of correct
+	  originator address for connected messages into the
+	  handleReceivedConnectedData function in order to correctly check
+	  even if data is presented from wrong socket.
+	* src/cip/cipconnectionmanager.c: fixed an issue in forward open of
+	  listen and input only connections
+
+2010-12-01  alil
+
+	* src/cip/appcontype.c: Fixed Bug# 3124374: faulty if in
+	  getListenOnlyConnection()
+	  thanks csar
+
+2010-10-21  alil
+
+	* src/cip/cipcommon.c, src/ports/platform-pc/opener_user_conf.h,
+	  src/typedefs.h: added config flag for enabling/disabling the
+	  support of 64Bit datatypes
+	* src/cip/cipcommon.c, src/cip/cipcommon.h, src/opener_api.h,
+	  src/typedefs.h: Added support for 64Bit integers, implemented a
+	  basic data type decoding infrastructure that simplifies the
+	  implementation of services like SetAttributeSingle, moved
+	  encodeData and decodeData into the public interface of opener in
+	  order to allow device implementers to use them for implementing
+	  setting and getting of special attributes like structs.
+	* src/enet_encap/encap.c: Refactored the names of the encapsulation
+	  message handling functions to better show that these are the
+	  functions for handling received messages.
+
+2010-09-24  alil
+
+	* src/enet_encap/cpf.c: Fixed wrong reply connection ID in
+	  connected explicit messages
+
+2010-08-11  alil
+
+	* src/ports/platform-pc/networkhandler.c: fixed bug# 3042699:
+	  Network handler should close sockets consistently
+
+2010-07-27  alil
+
+	* src/cip/cipcommon.c: Fixed Bug# 3034698: alignment
+
+2010-06-23  alil
+
+	* src/cip/cipcommon.c, src/cip/ciptcpipinterface.c,
+	  src/cip/ciptypes.h: fixed Bug# 3020064: error in tcpip object
+	  attr. 4
+
+2010-06-22  alil
+
+	* src/ports/platform-pc/networkhandler.c: Fixed Bug# 3019069:
+	  socket close
+
+2010-06-21  alil
+
+	* src/enet_encap/encap.c, src/opener_api.h,
+	  src/ports/platform-pc/networkhandler.c: worked to improve
+	  handling of to large packets
+
+2010-06-16  alil
+
+	* src/cip/cipcommon.c, src/cip/cipcommon.h: reworked
+	  outputAttribute function to be more flexible and better usable
+	  for encoding not only certain attributes but also for arrays and
+	  structures.
+
+2010-06-14  alil
+
+	* src/cip/cipcommon.c: Fixed Bug# 3015757: endianess bug in
+	  cipcommon.c
+
 2010-06-04  alil
 
 	* src/enet_encap/cpf.c: Fixed Bug# 3011151: Bug in
