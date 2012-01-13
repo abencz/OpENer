@@ -386,31 +386,34 @@ SendUnitData(struct S_Encapsulation_Data * pa_stReceiveData)
   EIP_INT16 nSendSize;
   EIP_STATUS eRetVal = EIP_OK_SEND;
 
-  /* Command specific data UDINT .. Interface Handle, UINT .. Timeout, CPF packets */
-  /* don't use the data yet */
-  ltohl(&pa_stReceiveData->m_acCurrentCommBufferPos); /* skip over null interface handle*/
-  ltohs(&pa_stReceiveData->m_acCurrentCommBufferPos); /* skip over unused timeout value*/
-  pa_stReceiveData->nData_length -= 6; /* the rest is in CPF format*/
-
-  if (EIP_ERROR != checkRegisteredSessions(pa_stReceiveData)) /* see if the EIP session is registered*/
+  if (pa_stReceiveData->nData_length >= 6)
     {
-      nSendSize
-      = notifyConnectedCPF(pa_stReceiveData,
-          &pa_stReceiveData->m_acCommBufferStart[ENCAPSULATION_HEADER_LENGTH]);
+      /* Command specific data UDINT .. Interface Handle, UINT .. Timeout, CPF packets */
+      /* don't use the data yet */
+      ltohl(&pa_stReceiveData->m_acCurrentCommBufferPos); /* skip over null interface handle*/
+      ltohs(&pa_stReceiveData->m_acCurrentCommBufferPos); /* skip over unused timeout value*/
+      pa_stReceiveData->nData_length -= 6; /* the rest is in CPF format*/
 
-      if (0 < nSendSize)
-        { /* need to send reply */
-          pa_stReceiveData->nData_length = nSendSize;
+      if (EIP_ERROR != checkRegisteredSessions(pa_stReceiveData)) /* see if the EIP session is registered*/
+        {
+          nSendSize
+          = notifyConnectedCPF(pa_stReceiveData,
+              &pa_stReceiveData->m_acCommBufferStart[ENCAPSULATION_HEADER_LENGTH]);
+
+          if (0 < nSendSize)
+            { /* need to send reply */
+              pa_stReceiveData->nData_length = nSendSize;
+            }
+          else
+            {
+              eRetVal = EIP_ERROR;
+            }
         }
       else
-        {
-          eRetVal = EIP_ERROR;
+        { /* received a package with non registered session handle */
+          pa_stReceiveData->nData_length = 0;
+          pa_stReceiveData->nStatus = OPENER_ENCAP_STATUS_INVALID_SESSION_HANDLE;
         }
-    }
-  else
-    { /* received a package with non registered session handle */
-      pa_stReceiveData->nData_length = 0;
-      pa_stReceiveData->nStatus = OPENER_ENCAP_STATUS_INVALID_SESSION_HANDLE;
     }
   return eRetVal;
 }
@@ -426,33 +429,36 @@ SendRRData(struct S_Encapsulation_Data * pa_stReceiveData)
 {
   EIP_INT16 nSendSize;
   EIP_STATUS eRetVal = EIP_OK_SEND;
-  /* Commandspecific data UDINT .. Interface Handle, UINT .. Timeout, CPF packets */
-  /* don't use the data yet */
-  ltohl(&pa_stReceiveData->m_acCurrentCommBufferPos); /* skip over null interface handle*/
-  ltohs(&pa_stReceiveData->m_acCurrentCommBufferPos); /* skip over unused timeout value*/
-  pa_stReceiveData->nData_length -= 6; /* the rest is in CPF format*/
 
-  if (EIP_ERROR != checkRegisteredSessions(pa_stReceiveData)) /* see if the EIP session is registered*/
+  if (pa_stReceiveData->nData_length >= 6)
     {
-      nSendSize
-      = notifyCPF(pa_stReceiveData,
-          &pa_stReceiveData->m_acCommBufferStart[ENCAPSULATION_HEADER_LENGTH]);
+      /* Commandspecific data UDINT .. Interface Handle, UINT .. Timeout, CPF packets */
+      /* don't use the data yet */
+      ltohl(&pa_stReceiveData->m_acCurrentCommBufferPos); /* skip over null interface handle*/
+      ltohs(&pa_stReceiveData->m_acCurrentCommBufferPos); /* skip over unused timeout value*/
+      pa_stReceiveData->nData_length -= 6; /* the rest is in CPF format*/
 
-      if (nSendSize >= 0)
-        { /* need to send reply */
-          pa_stReceiveData->nData_length = nSendSize;
+      if (EIP_ERROR != checkRegisteredSessions(pa_stReceiveData)) /* see if the EIP session is registered*/
+        {
+          nSendSize
+          = notifyCPF(pa_stReceiveData,
+              &pa_stReceiveData->m_acCommBufferStart[ENCAPSULATION_HEADER_LENGTH]);
+
+          if (nSendSize >= 0)
+            { /* need to send reply */
+              pa_stReceiveData->nData_length = nSendSize;
+            }
+          else
+            {
+              eRetVal = EIP_ERROR;
+            }
         }
       else
-        {
-          eRetVal = EIP_ERROR;
+        { /* received a package with non registered session handle */
+          pa_stReceiveData->nData_length = 0;
+          pa_stReceiveData->nStatus = OPENER_ENCAP_STATUS_INVALID_SESSION_HANDLE;
         }
     }
-  else    
-    { /* received a package with non registered session handle */
-      pa_stReceiveData->nData_length = 0;
-      pa_stReceiveData->nStatus = OPENER_ENCAP_STATUS_INVALID_SESSION_HANDLE;
-    }
-
   return eRetVal;
 }
 
