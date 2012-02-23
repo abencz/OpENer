@@ -59,7 +59,7 @@ TConnMgmHandling g_astConnMgmList[2
     + OPENER_CIP_NUM_APPLICATION_SPECIFIC_CONNECTABLE_OBJECTS];
 
 /*! List holding all currently active connections*/
-S_CIP_ConnectionObject *g_pstActiveConnectionList = NULL;
+/*@null@*/S_CIP_ConnectionObject *g_pstActiveConnectionList = NULL; 
 
 /*! buffer connection object needed for forward open */
 S_CIP_ConnectionObject g_stDummyConnectionObject;
@@ -134,10 +134,12 @@ parseConnectionPath(S_CIP_ConnectionObject *pa_pstConnObj,
 TConnMgmHandling *
 getConnMgmEntry(EIP_UINT32 pa_nClassId);
 
-int
+void initializeConnectionManagerData();
+
+unsigned int
 GETPADDEDLOGICALPATH(unsigned char **x)
 {
-  int tmp;
+  unsigned int tmp;
 
   tmp = *(*x)++;
   if ((tmp & 3) == 0)
@@ -175,6 +177,8 @@ EIP_STATUS
 Connection_Manager_Init(EIP_UINT16 pa_nUniqueConnID)
 {
   S_CIP_Class *pstConnectionManager;
+
+  initializeConnectionManagerData();
 
   pstConnectionManager = createCIPClass(CIP_CONNECTION_MANAGER_CLASS_CODE, /* class ID*/
   0, /* # of class attributes */
@@ -1267,4 +1271,10 @@ triggerConnections(unsigned int pa_unOutputAssembly,
         }
     }
   return nRetVal;
+}
+
+void initializeConnectionManagerData(){
+  memset(g_astConnMgmList, 0, scg_nNumConnectableObjects * sizeof(TConnMgmHandling));
+  initializeClass3ConnectionData();
+  initializeIOConnectionData();
 }

@@ -143,8 +143,10 @@ EIP_STATUS
 notifyMR(EIP_UINT8 * pa_pnData, int pa_nDataLength)
 {
   EIP_STATUS nRetVal = EIP_OK_SEND;
-
   EIP_BYTE nStatus;
+
+  gMRResponse.Data = g_acMessageDataReplyBuffer; /* set reply buffer, using a fixed buffer (about 100 bytes) */
+
   OPENER_TRACE_INFO("notifyMR: routing unconnected message\n");
   if (CIP_ERROR_SUCCESS != (nStatus = createMRRequeststructure(pa_pnData,
       pa_nDataLength, &gMRRequest)))

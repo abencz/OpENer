@@ -13,6 +13,7 @@
 #include "cipconnectionmanager.h"
 #include "cipidentity.h"
 
+
 /*Identity data from cipidentity.c*/
 extern EIP_UINT16 VendorID;
 extern EIP_UINT16 DeviceType;
@@ -93,6 +94,8 @@ void
 encapInit(void)
 {
   int i;
+
+  determineEndianess();
 
   /* initialize Sessions to invalid == free session */
   for (i = 0; i < OPENER_NUMBER_OF_SUPPORTED_SESSIONS; i++)
@@ -263,9 +266,10 @@ handleReceivedListIdentityCmd(struct S_Encapsulation_Data * pa_stReceiveData)
   pacCommBuf += 2; /*at this place the real length will be inserted below*/
 
   htols(SUPPORTED_PROTOCOL_VERSION, &pacCommBuf);
-  htols(htons(AF_INET), &pacCommBuf);
-  htols(htons(OPENER_ETHERNET_PORT), &pacCommBuf);
-  htoll(Interface_Configuration.IPAddress, &pacCommBuf);
+	
+	encapsulateIPAdress(OPENER_ETHERNET_PORT, Interface_Configuration.IPAddress, pacCommBuf);
+	pacCommBuf += 8;
+	
   memset(pacCommBuf, 0, 8);
   pacCommBuf += 8;
 
@@ -556,7 +560,7 @@ encapShutDown(void)
   int i;
   for (i = 0; i < OPENER_NUMBER_OF_SUPPORTED_SESSIONS; ++i)
     {
-      if (EIP_INVALID_SOCKET == anRegisteredSessions[i])
+      if (EIP_INVALID_SOCKET != anRegisteredSessions[i])
         {
           IApp_CloseSocket(anRegisteredSessions[i]);
           anRegisteredSessions[i] = EIP_INVALID_SOCKET;
