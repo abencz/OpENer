@@ -1218,11 +1218,12 @@ addConnectableObject(EIP_UINT32 pa_nClassId, TConnOpenFunc pa_pfOpenFunc)
         {
           g_astConnMgmList[i].m_nClassID = pa_nClassId;
           g_astConnMgmList[i].m_pfOpenFunc = pa_pfOpenFunc;
-          return EIP_OK;
+          nRetVal = EIP_OK;
+          break;
         }
     }
 
-  return EIP_ERROR;
+  return nRetVal;
 }
 
 TConnMgmHandling *
