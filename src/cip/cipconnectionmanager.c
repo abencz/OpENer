@@ -767,6 +767,23 @@ getConnectedObject(EIP_UINT32 ConnectionID)
 }
 
 S_CIP_ConnectionObject *
+getConnectedOutputAssembly(EIP_UINT32 pa_unOutputAssemblyId)
+{
+  S_CIP_ConnectionObject *pstRunner = g_pstActiveConnectionList;
+
+  while (NULL != pstRunner)
+    {
+      if (pstRunner->State == CONN_STATE_ESTABLISHED)
+        {
+          if (pstRunner->ConnectionPath.ConnectionPoint[0] == pa_unOutputAssemblyId)
+            return pstRunner;
+        }
+      pstRunner = pstRunner->m_pstNext;
+    }
+    return NULL;
+}
+
+S_CIP_ConnectionObject *
 checkForExistingConnection(S_CIP_ConnectionObject *pa_pstConnObj)
 {
   S_CIP_ConnectionObject *pstRunner = g_pstActiveConnectionList;
