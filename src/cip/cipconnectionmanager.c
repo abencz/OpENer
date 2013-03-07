@@ -461,7 +461,7 @@ generalConnectionConfiguration(S_CIP_ConnectionObject *pa_pstConnObj)
   pa_pstConnObj->m_nProductionInhibitTimer =
       pa_pstConnObj->m_unProductionInhibitTime = 0;
 
-  /*setup the preconsuption timer: max(ConnectionTimeoutMultiplier * EpectetedPacketRate, 10s) */
+  /*setup the preconsumption timer: max(ConnectionTimeoutMultiplier * EpectetedPacketRate, 10s) */
   pa_pstConnObj->InnacitvityWatchdogTimer =
       ((((pa_pstConnObj->O_to_T_RPI) / 1000)
           << (2 + pa_pstConnObj->ConnectionTimeoutMultiplier)) > 10000) ? (((pa_pstConnObj->O_to_T_RPI)

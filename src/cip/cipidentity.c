@@ -22,7 +22,7 @@ S_CIP_Revision Revison =
 EIP_UINT16 ID_Status = 0; /* #5 status of the device */
 EIP_UINT32 SerialNumber = 0; /* #6  Has to be set prior to OpENer initialization */
 S_CIP_Short_String ProductName =
-  { sizeof(OPENER_DEVICE_NAME) - 1, OPENER_DEVICE_NAME }; /* #7 */
+    { sizeof(OPENER_DEVICE_NAME) - 1, (EIP_BYTE *)OPENER_DEVICE_NAME }; /* #7 */
 
 
 void setDeviceSerialNumber(EIP_UINT32 pa_nSerialNumber)
